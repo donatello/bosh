@@ -21,23 +21,20 @@ module Bosh::Director::ConfigServer
       return raw_hash if raw_hash.nil?
       raise "Unable to interpolate provided object. Expected a 'Hash', got '#{raw_hash.class}'" unless raw_hash.is_a?(Hash)
 
-      deployment_name = variable_set.deployment.name unless variable_set.nil?
-
       subtrees_to_ignore = options.fetch(:subtrees_to_ignore, [])
 
-      placeholders_paths = @deep_hash_replacer.placeholders_paths(raw_hash, subtrees_to_ignore)
-      placeholders_list = placeholders_paths.flat_map { |c| c['placeholders'] }.uniq
+      variables_paths = @deep_hash_replacer.placeholders_paths(raw_hash, subtrees_to_ignore)
+      variables_list = variables_paths.flat_map { |c| c['placeholders'] }.uniq
 
       retrieved_config_server_values =
-      if deployment_name.nil?
-        fetch_values_with_latest(placeholders_list)
-      else
-        must_be_absolute_name = options.fetch(:must_be_absolute_name, false)
-        variable_set = variable_set || @deployment_lookup.by_name(deployment_name).current_variable_set
-        fetch_values_with_deployment(placeholders_list, deployment_name, variable_set, must_be_absolute_name)
-      end
+        if variable_set.nil?
+          fetch_values_with_latest(variables_list)
+        else
+          must_be_absolute_name = options.fetch(:must_be_absolute_name, false)
+          fetch_values_with_deployment(variables_list, variable_set, must_be_absolute_name)
+        end
 
-      @deep_hash_replacer.replace_placeholders(raw_hash, placeholders_paths, retrieved_config_server_values)
+      @deep_hash_replacer.replace_placeholders(raw_hash, variables_paths, retrieved_config_server_values)
     end
 
     # @param [Hash] link_properties_hash Link spec properties to be interpolated
@@ -127,11 +124,13 @@ module Bosh::Director::ConfigServer
 
     private
 
-    def fetch_values_with_deployment(variables, deployment_name, variable_set, must_be_absolute_name)
+    def fetch_values_with_deployment(variables, variable_set, must_be_absolute_name)
       ConfigServerHelper.validate_absolute_names(variables) if must_be_absolute_name
 
       errors = []
       config_values = {}
+
+      deployment_name = variable_set.deployment.name
 
       variables.each do |variable|
         name = ConfigServerHelper.add_prefix_if_not_absolute(
