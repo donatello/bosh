@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-set -e
-
 source bosh-src/ci/tasks/utils.sh
 
 check_param RUBY_VERSION
@@ -55,4 +53,7 @@ bundle install --local
 
 export BOSH_CLI_SILENCE_SLOW_LOAD_WARNING=true
 
+set +e
 bundle exec rake --trace spec:integration
+
+grep -Ri "Agent exited with error:" tmp/integration-tests-workspace 2>/dev/null

@@ -2,6 +2,7 @@
 
 require 'json'
 require 'yaml'
+require 'securerandom'
 require_relative '../lib/cloud/dummy'
 
 module Logging
@@ -47,7 +48,9 @@ result = nil
 error = nil
 
 begin
-  director_config = YAML.load_file(ARGV.shift)
+  config_file_path = ARGV.shift
+  director_config = YAML.load_file(config_file_path)
+
   cloud_properties = director_config['cloud']['properties']
   log_buffer = StringIO.new
   cloud_properties['log_buffer'] = log_buffer
@@ -57,6 +60,13 @@ begin
 
   command = request['method']
   arguments = request['arguments']
+
+
+  if director_config.dig('cloud','properties','agent','blobstore','provider') == nil
+    tmp_file = config_file_path.gsub('director_test.yml',"#{SecureRandom.hex}_director_test.yml")
+    File.open(tmp_file, 'w') {|f| f.write director_config.to_yaml }
+    raise "Blobstore provider not set for Request #{request.inspect}"
+  end
 
   result = dummy.send(command, *arguments)
 rescue => e

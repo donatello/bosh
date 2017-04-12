@@ -238,7 +238,7 @@ module Bosh::Dev::Sandbox
       @database_proxy && @database_proxy.stop
 
       FileUtils.rm_f(dns_db_path)
-      FileUtils.rm_rf(agent_tmp_path)
+      # FileUtils.rm_rf(agent_tmp_path)
       FileUtils.rm_rf(blobstore_storage_dir)
     end
 

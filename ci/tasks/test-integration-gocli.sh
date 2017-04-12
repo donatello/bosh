@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-set -e
-
 source bosh-src/ci/tasks/utils.sh
 
 check_param RUBY_VERSION
@@ -56,4 +54,7 @@ print_git_state
 
 bundle install --local
 
+set +e
 bundle exec rake --trace spec:integration_gocli
+
+grep -Ri "Agent exited with error:" tmp/integration-tests-workspace 2>/dev/null

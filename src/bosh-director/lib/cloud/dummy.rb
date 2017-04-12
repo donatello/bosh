@@ -177,6 +177,7 @@ module Bosh
         agent_id = agent_id_for_vm_id(vm_cid)
         settings = read_agent_settings(agent_id)
         settings['disks']['persistent'][disk_id] = 'attached'
+
         write_agent_settings(agent_id, settings)
       end
 
@@ -191,6 +192,7 @@ module Bosh
         agent_id = agent_id_for_vm_id(vm_cid)
         settings = read_agent_settings(agent_id)
         settings['disks']['persistent'].delete(disk_id)
+
         write_agent_settings(agent_id, settings)
       end
 
@@ -244,7 +246,7 @@ module Bosh
       end
 
       def reset
-        FileUtils.rm_rf(@base_dir)
+        FileUtils.mv(@base_dir, "#{@base_dir}-#{SecureRandom.hex}")
         prepare
       end
 
@@ -410,8 +412,22 @@ module Bosh
       end
 
       def write_agent_settings(agent_id, settings)
+
+        if settings.dig(:blobstore,'provider') == nil and settings.dig('blobstore','provider') == nil
+          puts "OMG INVALID STATE in write_agent_settings - From:#{caller} No blobstore defined #{agent_id}"
+          puts "OMG settings : #{settings}"
+        end
+
         FileUtils.mkdir_p(File.dirname(agent_settings_file(agent_id)))
         File.write(agent_settings_file(agent_id), JSON.generate(settings))
+
+        open(File.join(@base_dir, 'dummy-cpi-agent-WRITE_AGENT_SETTINGS.json.log'), 'a') { |f|
+          f << "===== #{Time.now} Agent #{agent_id}\n"
+          f << JSON.generate(settings)
+          f << "\n"
+          f << "Caller :#{caller}\n"
+          f << "\n"
+        }
       end
 
       def write_agent_default_network(agent_id, ip_address)
